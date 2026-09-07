@@ -66,11 +66,13 @@ import androidx.compose.ui.unit.sp
 import com.example.data.local.entity.ExpenseEntity
 import com.example.data.local.entity.MemberEntity
 import com.example.data.local.entity.PartyEntity
+import com.example.data.model.BillPdfConfig
 import com.example.data.model.MemberSummary
 import com.example.data.model.PartyFullSummary
 import com.example.data.model.SettlementTransfer
 import com.example.ui.components.AddExpenseDialog
 import com.example.ui.components.AddMemberDialog
+import com.example.ui.components.CreateBillDialog
 import com.example.ui.components.EditExpenseDialog
 import com.example.ui.components.EditMemberDialog
 import com.example.ui.components.EditPartyDialog
@@ -105,6 +107,7 @@ fun PartyDetailScreen(
     onUpdateExpense: (ExpenseEntity) -> Unit = {},
     onToggleSettled: (Boolean) -> Unit,
     onExportPdf: () -> Unit,
+    onCreateBillPdf: (BillPdfConfig) -> Unit = {},
     onSendAlert: (debtorName: String, creditorName: String, amount: String) -> Unit,
     modifier: Modifier = Modifier
 ) {
@@ -121,6 +124,8 @@ fun PartyDetailScreen(
     var showAddExpenseDialog by remember { mutableStateOf(false) }
     var showAddMemberDialog by remember { mutableStateOf(false) }
     var showEditPartyDialog by remember { mutableStateOf(false) }
+    var showCreateBillDialog by remember { mutableStateOf(false) }
+    var billTargetMemberName by remember { mutableStateOf<String?>(null) }
     var editingMember by remember { mutableStateOf<MemberEntity?>(null) }
     var editingExpense by remember { mutableStateOf<ExpenseEntity?>(null) }
 
@@ -165,14 +170,17 @@ fun PartyDetailScreen(
                             tint = MaterialTheme.colorScheme.primary
                         )
                     }
-                    // PDF Export Action
+                    // PDF Bill Export Action
                     IconButton(
-                        onClick = onExportPdf,
+                        onClick = {
+                            billTargetMemberName = null
+                            showCreateBillDialog = true
+                        },
                         modifier = Modifier.testTag("export_pdf_button")
                     ) {
                         Icon(
-                            imageVector = Icons.Default.PictureAsPdf,
-                            contentDescription = "Export PDF Report",
+                            imageVector = Icons.Default.ReceiptLong,
+                            contentDescription = "Create Bill & PDF",
                             tint = MaterialTheme.colorScheme.primary
                         )
                     }
@@ -273,13 +281,17 @@ fun PartyDetailScreen(
 
                         Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                             OutlinedButton(
-                                onClick = onExportPdf,
+                                onClick = {
+                                    billTargetMemberName = null
+                                    showCreateBillDialog = true
+                                },
                                 shape = RoundedCornerShape(12.dp),
-                                border = BorderStroke(1.dp, MaterialTheme.colorScheme.outline)
+                                border = BorderStroke(1.dp, MaterialTheme.colorScheme.outline),
+                                modifier = Modifier.testTag("hero_create_bill_button")
                             ) {
-                                Icon(Icons.Default.PictureAsPdf, contentDescription = null, modifier = Modifier.size(16.dp))
+                                Icon(Icons.Default.ReceiptLong, contentDescription = null, modifier = Modifier.size(16.dp), tint = MaterialTheme.colorScheme.primary)
                                 Spacer(modifier = Modifier.width(4.dp))
-                                Text("PDF", fontSize = 12.sp, fontWeight = FontWeight.SemiBold)
+                                Text("Bill & QR", fontSize = 12.sp, fontWeight = FontWeight.SemiBold, color = MaterialTheme.colorScheme.onSurface)
                             }
 
                             Button(
@@ -348,12 +360,20 @@ fun PartyDetailScreen(
                     currency = currency,
                     onAddMemberClick = { showAddMemberDialog = true },
                     onEditMember = { editingMember = it },
-                    onDeleteMember = onDeleteMember
+                    onDeleteMember = onDeleteMember,
+                    onCreateBill = { memberName ->
+                        billTargetMemberName = memberName
+                        showCreateBillDialog = true
+                    }
                 )
                 2 -> SettlementsTabContent(
                     summary = summary,
                     currency = currency,
-                    onSendAlert = onSendAlert
+                    onSendAlert = onSendAlert,
+                    onCreateBill = { memberName ->
+                        billTargetMemberName = memberName
+                        showCreateBillDialog = true
+                    }
                 )
             }
         }
@@ -421,6 +441,17 @@ fun PartyDetailScreen(
                         )
                     )
                     editingExpense = null
+                }
+            )
+        }
+
+        if (showCreateBillDialog) {
+            CreateBillDialog(
+                summary = summary,
+                initialTargetMemberName = billTargetMemberName,
+                onDismiss = { showCreateBillDialog = false },
+                onGenerateBillPdf = { config ->
+                    onCreateBillPdf(config)
                 }
             )
         }
@@ -600,7 +631,8 @@ fun MembersTabContent(
     currency: String,
     onAddMemberClick: () -> Unit,
     onEditMember: (MemberEntity) -> Unit,
-    onDeleteMember: (Long) -> Unit
+    onDeleteMember: (Long) -> Unit,
+    onCreateBill: (String) -> Unit
 ) {
     LazyColumn(
         modifier = Modifier.fillMaxSize(),
@@ -659,7 +691,8 @@ fun MembersTabContent(
                     summary = mSummary,
                     currency = currency,
                     onEdit = { onEditMember(mSummary.member) },
-                    onDelete = { onDeleteMember(mSummary.member.id) }
+                    onDelete = { onDeleteMember(mSummary.member.id) },
+                    onCreateBill = { onCreateBill(mSummary.member.name) }
                 )
             }
 
@@ -707,7 +740,8 @@ fun MemberSummaryCard(
     summary: MemberSummary,
     currency: String,
     onEdit: () -> Unit,
-    onDelete: () -> Unit
+    onDelete: () -> Unit,
+    onCreateBill: () -> Unit
 ) {
     Card(
         modifier = Modifier.fillMaxWidth(),
@@ -769,6 +803,14 @@ fun MemberSummaryCard(
                     }
 
                     Row {
+                        IconButton(onClick = onCreateBill, modifier = Modifier.size(24.dp).padding(top = 2.dp)) {
+                            Icon(
+                                imageVector = Icons.Default.ReceiptLong,
+                                contentDescription = "Create Bill for Member",
+                                tint = MaterialTheme.colorScheme.primary.copy(alpha = 0.85f),
+                                modifier = Modifier.size(15.dp)
+                            )
+                        }
                         IconButton(onClick = onEdit, modifier = Modifier.size(24.dp).padding(top = 2.dp)) {
                             Icon(
                                 imageVector = Icons.Default.Edit,
@@ -796,7 +838,8 @@ fun MemberSummaryCard(
 fun SettlementsTabContent(
     summary: PartyFullSummary,
     currency: String,
-    onSendAlert: (debtorName: String, creditorName: String, amount: String) -> Unit
+    onSendAlert: (debtorName: String, creditorName: String, amount: String) -> Unit,
+    onCreateBill: (String?) -> Unit
 ) {
     val settlements = summary.settlements
 
@@ -805,6 +848,47 @@ fun SettlementsTabContent(
         contentPadding = PaddingValues(16.dp),
         verticalArrangement = Arrangement.spacedBy(12.dp)
     ) {
+        // Quick Bill & QR Card
+        item {
+            Card(
+                modifier = Modifier.fillMaxWidth(),
+                shape = RoundedCornerShape(16.dp),
+                colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
+                border = BorderStroke(1.dp, MaterialTheme.colorScheme.outline)
+            ) {
+                Row(
+                    modifier = Modifier.padding(14.dp),
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.SpaceBetween
+                ) {
+                    Column(modifier = Modifier.weight(1f)) {
+                        Text(
+                            "Generate Bill & UPI QR",
+                            fontWeight = FontWeight.SemiBold,
+                            fontSize = 14.sp,
+                            color = MaterialTheme.colorScheme.onSurface
+                        )
+                        Text(
+                            "Create settlement PDF with UPI ID and bottom QR code to collect payments.",
+                            fontSize = 12.sp,
+                            color = SubtitleGray
+                        )
+                    }
+                    Spacer(modifier = Modifier.width(10.dp))
+                    Button(
+                        onClick = { onCreateBill(null) },
+                        shape = RoundedCornerShape(10.dp),
+                        colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.primary),
+                        modifier = Modifier.testTag("settlement_create_group_bill_btn")
+                    ) {
+                        Icon(Icons.Default.ReceiptLong, contentDescription = null, modifier = Modifier.size(15.dp))
+                        Spacer(modifier = Modifier.width(4.dp))
+                        Text("Create Bill", fontSize = 12.sp)
+                    }
+                }
+            }
+        }
+
         item {
             Column {
                 Text(
@@ -862,6 +946,9 @@ fun SettlementsTabContent(
                     onSendAlert = {
                         val amountFormatted = "$currency${String.format(Locale.US, "%.2f", transfer.amount)}"
                         onSendAlert(transfer.fromMemberName, transfer.toMemberName, amountFormatted)
+                    },
+                    onCreateBill = {
+                        onCreateBill(transfer.fromMemberName)
                     }
                 )
             }
@@ -874,7 +961,8 @@ fun SettlementTransferCard(
     transfer: SettlementTransfer,
     currency: String,
     partyTitle: String,
-    onSendAlert: () -> Unit
+    onSendAlert: () -> Unit,
+    onCreateBill: () -> Unit
 ) {
     Card(
         modifier = Modifier.fillMaxWidth(),
@@ -925,26 +1013,50 @@ fun SettlementTransferCard(
 
             Spacer(modifier = Modifier.height(12.dp))
 
-            // Action: Send Push Notification / Reminder
-            OutlinedButton(
-                onClick = onSendAlert,
+            // Actions: Alert and Create Bill
+            Row(
                 modifier = Modifier.fillMaxWidth(),
-                shape = RoundedCornerShape(12.dp),
-                border = BorderStroke(1.dp, MaterialTheme.colorScheme.outline)
+                horizontalArrangement = Arrangement.spacedBy(8.dp)
             ) {
-                Icon(
-                    imageVector = Icons.Default.NotificationsActive,
-                    contentDescription = null,
-                    modifier = Modifier.size(16.dp),
-                    tint = MaterialTheme.colorScheme.primary
-                )
-                Spacer(modifier = Modifier.width(8.dp))
-                Text(
-                    "Notify ${transfer.fromMemberName} (Settlement Alert)",
-                    fontSize = 12.sp,
-                    fontWeight = FontWeight.Medium,
-                    color = MaterialTheme.colorScheme.onSurface
-                )
+                OutlinedButton(
+                    onClick = onSendAlert,
+                    modifier = Modifier.weight(1f),
+                    shape = RoundedCornerShape(12.dp),
+                    border = BorderStroke(1.dp, MaterialTheme.colorScheme.outline)
+                ) {
+                    Icon(
+                        imageVector = Icons.Default.NotificationsActive,
+                        contentDescription = null,
+                        modifier = Modifier.size(15.dp),
+                        tint = MaterialTheme.colorScheme.primary
+                    )
+                    Spacer(modifier = Modifier.width(6.dp))
+                    Text(
+                        "Notify",
+                        fontSize = 12.sp,
+                        fontWeight = FontWeight.Medium,
+                        color = MaterialTheme.colorScheme.onSurface
+                    )
+                }
+
+                Button(
+                    onClick = onCreateBill,
+                    modifier = Modifier.weight(1.3f).testTag("bill_transfer_button"),
+                    shape = RoundedCornerShape(12.dp),
+                    colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.primary)
+                ) {
+                    Icon(
+                        imageVector = Icons.Default.ReceiptLong,
+                        contentDescription = null,
+                        modifier = Modifier.size(15.dp)
+                    )
+                    Spacer(modifier = Modifier.width(6.dp))
+                    Text(
+                        "Create Bill & QR",
+                        fontSize = 12.sp,
+                        fontWeight = FontWeight.SemiBold
+                    )
+                }
             }
         }
     }

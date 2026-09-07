@@ -59,7 +59,6 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.core.content.ContextCompat
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
-import com.example.ui.components.SyncStatusChip
 import com.example.ui.screens.AccountScreen
 import com.example.ui.screens.HomeScreen
 import com.example.ui.screens.PartyDetailScreen
@@ -161,6 +160,7 @@ fun PartyCalculatorApp(viewModel: PartyViewModel) {
                 selectedPartyId?.let { viewModel.togglePartySettled(it, settled) }
             },
             onExportPdf = { viewModel.exportPdf(context) },
+            onCreateBillPdf = { config -> viewModel.createBillPdf(context, config) },
             onSendAlert = { debtor, creditor, amt ->
                 currentSummary?.party?.let { party ->
                     viewModel.sendSettlementNotification(context, party.title, debtor, creditor, amt)
@@ -185,7 +185,7 @@ fun PartyCalculatorApp(viewModel: PartyViewModel) {
                                 text = when (currentNavIndex) {
                                     0 -> "Party Calculator"
                                     1 -> "Expense Calculator"
-                                    else -> "Settings & Storage"
+                                    else -> "Settings"
                                 },
                                 fontWeight = FontWeight.SemiBold,
                                 fontSize = 19.sp,
@@ -194,12 +194,6 @@ fun PartyCalculatorApp(viewModel: PartyViewModel) {
                         }
                     },
                     actions = {
-                        SyncStatusChip(
-                            status = userAccount.syncStatus,
-                            isOffline = isOffline,
-                            modifier = Modifier.padding(end = 4.dp)
-                        )
-
                         // Dark mode quick toggle
                         IconButton(
                             onClick = {
@@ -325,7 +319,6 @@ fun PartyCalculatorApp(viewModel: PartyViewModel) {
                     2 -> AccountScreen(
                         darkModeSetting = darkModeSetting,
                         onSetDarkMode = { viewModel.setDarkMode(it) },
-                        onClearAllData = { viewModel.clearAllData() },
                         onSendTestNotification = {
                             NotificationHelper.showSettlementReminder(
                                 context = context,

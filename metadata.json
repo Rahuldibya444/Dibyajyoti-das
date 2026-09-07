@@ -1,6 +1,6 @@
 {
   "name": "Party Calculator",
-  "description": "Party expense calculator with member tracking, bill splitting, settlements, PDF report exports, and 100% offline local editable storage.",
+  "description": "Party expense calculator with member tracking, bill splitting, settlements, PDF invoices with UPI QR codes, and clean manual editing.",
   "requestFramePermissions": [],
   "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
 }

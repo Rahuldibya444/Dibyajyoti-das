@@ -50,3 +50,12 @@ data class PartyFullSummary(
     val totalExpense: Double,
     val averagePerPerson: Double
 )
+
+data class BillPdfConfig(
+    val upiId: String = "",
+    val payeeName: String = "",
+    val note: String = "",
+    val customAmount: Double? = null,
+    val targetMemberId: Long? = null,
+    val targetMemberName: String? = null
+)

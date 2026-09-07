@@ -7,6 +7,7 @@ import androidx.lifecycle.viewModelScope
 import com.example.data.local.entity.ExpenseEntity
 import com.example.data.local.entity.MemberEntity
 import com.example.data.local.entity.PartyEntity
+import com.example.data.model.BillPdfConfig
 import com.example.data.model.PartyFullSummary
 import com.example.data.model.UserAccount
 import com.example.data.repository.PartyRepository
@@ -194,6 +195,20 @@ class PartyViewModel(private val repository: PartyRepository) : ViewModel() {
             _userMessage.value = "PDF Summary generated: ${file.name}"
         } else {
             _userMessage.value = "Failed to generate PDF report"
+        }
+    }
+
+    fun createBillPdf(context: Context, config: BillPdfConfig) {
+        val summary = currentPartySummary.value
+        if (summary == null) {
+            _userMessage.value = "No party summary available to create bill"
+            return
+        }
+        val file = PdfReportExporter.generateAndSharePdf(context, summary, config)
+        if (file != null) {
+            _userMessage.value = "Bill PDF generated: ${file.name}"
+        } else {
+            _userMessage.value = "Failed to generate Bill PDF"
         }
     }
 
